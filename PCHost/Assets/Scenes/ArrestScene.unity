@@ -150,8 +150,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StoryStepManager
   imageGroups:
   - {fileID: 1063398519}
-  - {fileID: 1272506397}
-  - {fileID: 1348066819}
   storyLines:
   - "\uBC94\uC778\uC744 \uAC80\uAC70\uD588\uC2B5\uB2C8\uB2E4!!!!"
   - "\uC2DC\uBBFC\uB4E4\uC758 \uC548\uC804\uC744 \uC9C0\uCF1C\uB0C8\uACE0 \uD6CC\uB96D\uD55C
@@ -5342,14 +5340,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.09380562, g: 0.36312735, b: 0.6415094, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: 70aca5bcb51fedd4698e9d37f41eed7a, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -5385,7 +5383,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1272506396
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5610,7 +5608,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1348066818
 RectTransform:
   m_ObjectHideFlags: 0
