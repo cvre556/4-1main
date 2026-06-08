@@ -1,0 +1,427 @@
+﻿using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine.SceneManagement;
+
+public class WitnessGame : MonoBehaviour
+{
+    // ──────────────────────────────────────
+    // 게임 데이터 (목격자 / 용의자 진술)
+    // ──────────────────────────────────────
+
+    // 목격자 이름
+    private string[] witnessNames = { "은행 직원", "은행 방문객", "청소 동료" };
+
+    // 목격자 진술
+    private string[] witnessStatements =
+    {
+        "비서가 서류가방을 가슴에 꽉 안고\n화장실 복도에서 장시간 서성이는 것을\n제 눈으로 직접 봤어요!",
+        "수집가가 금고 쪽 복도에서\n두리번거리고 있었어요.\n분명히 봤습니다.",
+        "청소부가 청소 카트도 없이\n수상한 가방을 들고\n은행 안을 돌아다니고 있었어요."
+    };
+
+    // 각 목격자의 정답 용의자
+    private string[] correctSuspects = { "비서", "수집가", "청소부" };
+
+    // 수집 증거 이름
+    private string[] evidenceNames =
+    {
+        "비서 서류가방 수상 목격",
+        "수집가 복도 목격",
+        "청소부 수상한 가방"
+    };
+
+    // 용의자 이름 및 진술
+    private string[] suspectNames = { "수집가", "경비원", "비서", "청소부" };
+    private string[] suspectStatements =
+    {
+        "저는 그날 가게에 있었어요.\n은행에 간 적 없습니다.",
+        "저는 그날 졸음 약을 마셔서\n경비실에서 쓰러져 있었어요.",
+        "저는 화장실에만 있었어요.\n몸이 안 좋아서 나오지 않았습니다.",
+        "저는 지하에서 청소했어요.\n위층에는 올라간 적 없어요."
+    };
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // [추가] 목격자 캐릭터 이미지 배열
+    // Inspector에서 연결:
+    //   Element 0: 은행_직원_2_T   (상반신 대화용)
+    //   Element 1: 은행_방문객_2_T (상반신 대화용)
+    //   Element 2: 청소부_동료_2_T (상반신 대화용)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    [Header("목격자 대화 이미지 (상반신 — Inspector에서 연결)")]
+    public Sprite[] witnessSprites;
+    // 순서: 0=은행직원, 1=은행방문객, 2=청소부동료
+
+    // ──────────────────────────────────────
+    // 대화 매니저
+    // ──────────────────────────────────────
+    [Header("대화 매니저")]
+    public DialogueManager dialogueManager;
+
+    // ──────────────────────────────────────
+    // 가이드 팝업
+    // ──────────────────────────────────────
+    [Header("가이드 팝업")]
+    public GameObject guidePopup;
+    public Button startButton;
+
+    // ──────────────────────────────────────
+    // 목격자 버튼 3개
+    // ──────────────────────────────────────
+    [Header("목격자 버튼")]
+    public Button witnessBtn1;
+    public Button witnessBtn2;
+    public Button witnessBtn3;
+
+    // ──────────────────────────────────────
+    // 진술 비교 팝업
+    // ──────────────────────────────────────
+    [Header("진술 비교 팝업")]
+    public GameObject statementPopup;
+    public TextMeshProUGUI witnessNameText;
+    public TextMeshProUGUI witnessStatementText;
+    public TextMeshProUGUI resultText;
+    public Button closePopupButton;
+
+    // 용의자 카드 4개
+    [Header("용의자 카드")]
+    public Button suspectCard1;  // 수집가
+    public Button suspectCard2;  // 경비원
+    public Button suspectCard3;  // 비서
+    public Button suspectCard4;  // 청소부
+    public TextMeshProUGUI suspectStatement1;
+    public TextMeshProUGUI suspectStatement2;
+    public TextMeshProUGUI suspectStatement3;
+    public TextMeshProUGUI suspectStatement4;
+
+    // ──────────────────────────────────────
+    // 리포트 팝업
+    // ──────────────────────────────────────
+    [Header("리포트 팝업")]
+    public Button reportButton;
+    public GameObject reportPopup;
+    public TextMeshProUGUI reportText;
+    public Button closeReportButton;
+
+    // ──────────────────────────────────────
+    // 미션 완료
+    // ──────────────────────────────────────
+    [Header("미션 완료")]
+    public GameObject clearTitleText;
+    public GameObject clearDescText;
+    public TextMeshProUGUI countdownText;
+
+    // ──────────────────────────────────────
+    // 상태 변수
+    // ──────────────────────────────────────
+    private int currentWitness = -1;
+    private List<bool> witnessCleared = new List<bool> { false, false, false };
+    private List<string> collectedStatements = new List<string>();
+
+    // ──────────────────────────────────────
+    // Start
+    // ──────────────────────────────────────
+    void Start()
+    {
+        // 초기화
+        guidePopup.SetActive(true);
+        statementPopup.SetActive(false);
+        reportPopup.SetActive(false);
+        clearTitleText.SetActive(false);
+        clearDescText.SetActive(false);
+        countdownText.gameObject.SetActive(false);
+
+        reportButton.gameObject.SetActive(true);
+
+        // 목격자 버튼 숨김 (가이드 팝업 닫기 전)
+        witnessBtn1.gameObject.SetActive(false);
+        witnessBtn2.gameObject.SetActive(false);
+        witnessBtn3.gameObject.SetActive(false);
+
+        // 용의자 카드 진술 초기화
+        suspectStatement1.text = suspectStatements[0];
+        suspectStatement2.text = suspectStatements[1];
+        suspectStatement3.text = suspectStatements[2];
+        suspectStatement4.text = suspectStatements[3];
+
+        // 버튼 이벤트 등록
+        startButton.onClick.AddListener(OnStartClicked);
+        closePopupButton.onClick.AddListener(OnClosePopup);
+        closeReportButton.onClick.AddListener(() => reportPopup.SetActive(false));
+        reportButton.onClick.AddListener(OnReportClicked);
+
+        witnessBtn1.onClick.AddListener(() => OnWitnessClicked(0));
+        witnessBtn2.onClick.AddListener(() => OnWitnessClicked(1));
+        witnessBtn3.onClick.AddListener(() => OnWitnessClicked(2));
+
+        suspectCard1.onClick.AddListener(() => OnSuspectSelected(suspectNames[0]));
+        suspectCard2.onClick.AddListener(() => OnSuspectSelected(suspectNames[1]));
+        suspectCard3.onClick.AddListener(() => OnSuspectSelected(suspectNames[2]));
+        suspectCard4.onClick.AddListener(() => OnSuspectSelected(suspectNames[3]));
+    }
+
+    // ──────────────────────────────────────
+    // 시작 버튼
+    // ──────────────────────────────────────
+    void OnStartClicked()
+    {
+        guidePopup.SetActive(false);
+        witnessBtn1.gameObject.SetActive(true);
+        witnessBtn2.gameObject.SetActive(true);
+        witnessBtn3.gameObject.SetActive(true);
+    }
+
+    // ──────────────────────────────────────
+    // 목격자 버튼 클릭
+    // ──────────────────────────────────────
+    void OnWitnessClicked(int index)
+    {
+        currentWitness = index;
+
+        // 모든 목격자 버튼 숨기기
+        witnessBtn1.gameObject.SetActive(false);
+        witnessBtn2.gameObject.SetActive(false);
+        witnessBtn3.gameObject.SetActive(false);
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // [핵심] 대화 시작 — 목격자 이미지를
+        // DialogueLine.characterSprite에 자동 주입
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        var lines = GetDialogueLines(index);
+
+        // witnessSprites 배열에서 해당 인덱스 이미지 가져와
+        // 모든 대화 라인에 적용
+        Sprite portrait = GetWitnessSprite(index);
+        if (portrait != null)
+        {
+            foreach (var line in lines)
+            {
+                if (line.characterSprite == null)
+                    line.characterSprite = portrait;
+            }
+        }
+
+        dialogueManager.StartDialogue(lines, () =>
+        {
+            // 대화 완료 후 진술 팝업 열기
+            witnessNameText.text = $"목격자: {witnessNames[index]}";
+            witnessStatementText.text = $"\"{witnessStatements[index]}\"";
+            ResetCardColors();
+            statementPopup.SetActive(true);
+        });
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // [추가] 안전하게 목격자 Sprite 가져오기
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    private Sprite GetWitnessSprite(int index)
+    {
+        if (witnessSprites == null) return null;
+        if (index < 0 || index >= witnessSprites.Length) return null;
+        return witnessSprites[index];
+    }
+
+    // ──────────────────────────────────────
+    // 목격자별 대화 스크립트
+    // ──────────────────────────────────────
+    List<DialogueManager.DialogueLine> GetDialogueLines(int index)
+    {
+        var lines = new List<DialogueManager.DialogueLine>();
+
+        if (index == 0) // 은행 직원
+        {
+            lines.Add(new DialogueManager.DialogueLine
+            {
+                speakerName = "은행 직원",
+                text = "그날 저는 은행에서 평소처럼 근무하고 있었어요."
+            });
+            lines.Add(new DialogueManager.DialogueLine
+            {
+                speakerName = "은행 직원",
+                text = "<color=yellow><b>비서가 서류가방을 가슴에 꽉 안고</b></color>\n화장실 복도에서 장시간 서성이는 것을\n제 눈으로 직접 봤어요!"
+            });
+            lines.Add(new DialogueManager.DialogueLine
+            {
+                speakerName = "은행 직원",
+                text = "분명히 뭔가 이상했어요.\n평소엔 그런 행동을 하는 사람이 아니었거든요."
+            });
+        }
+        else if (index == 1) // 은행 방문객
+        {
+            lines.Add(new DialogueManager.DialogueLine
+            {
+                speakerName = "은행 방문객",
+                text = "저는 그날 볼일이 있어서 은행에 들렀어요."
+            });
+            lines.Add(new DialogueManager.DialogueLine
+            {
+                speakerName = "은행 방문객",
+                text = "<color=yellow><b>수집가가 금고 쪽 복도에서\n두리번거리고 있었어요.</b></color>\n분명히 봤습니다."
+            });
+            lines.Add(new DialogueManager.DialogueLine
+            {
+                speakerName = "은행 방문객",
+                text = "뭔가 찾는 것처럼 보였어요.\n수상한 느낌이 들었죠."
+            });
+        }
+        else // 청소 동료
+        {
+            lines.Add(new DialogueManager.DialogueLine
+            {
+                speakerName = "청소 동료",
+                text = "저는 그날 함께 일하는 동료를 봤어요."
+            });
+            lines.Add(new DialogueManager.DialogueLine
+            {
+                speakerName = "청소 동료",
+                text = "<color=yellow><b>청소부가 청소 카트도 없이\n수상한 가방을 들고</b></color>\n은행 안을 돌아다니고 있었어요."
+            });
+            lines.Add(new DialogueManager.DialogueLine
+            {
+                speakerName = "청소 동료",
+                text = "청소 카트 없이 다니는 건\n처음 봤어요. 이상했죠."
+            });
+        }
+
+        return lines;
+    }
+
+    // ──────────────────────────────────────
+    // 팝업 닫기
+    // ──────────────────────────────────────
+    void OnClosePopup()
+    {
+        if (!witnessCleared[0]) witnessBtn1.gameObject.SetActive(true);
+        if (!witnessCleared[1]) witnessBtn2.gameObject.SetActive(true);
+        if (!witnessCleared[2]) witnessBtn3.gameObject.SetActive(true);
+
+        statementPopup.SetActive(false);
+        currentWitness = -1;
+    }
+
+    // ──────────────────────────────────────
+    // 용의자 카드 선택
+    // ──────────────────────────────────────
+    void OnSuspectSelected(string suspectName)
+    {
+        if (currentWitness < 0) return;
+
+        if (suspectName == correctSuspects[currentWitness])
+        {
+            // 정답
+            resultText.text = $"정답! {suspectName}의 진술과 목격자 진술이 모순됩니다!";
+            resultText.color = Color.green;
+            HighlightCorrectCard(suspectName);
+            StartCoroutine(EvidenceObtained());
+        }
+        else
+        {
+            // 오답
+            resultText.text = $"다시 생각해보세요!\n{suspectName}의 진술과 비교해보세요.";
+            resultText.color = Color.red;
+        }
+    }
+
+    // ──────────────────────────────────────
+    // 증거 획득
+    // ──────────────────────────────────────
+    IEnumerator EvidenceObtained()
+    {
+        yield return new WaitForSeconds(1.5f);
+
+        string evidence = evidenceNames[currentWitness];
+        if (DataManager.Instance != null)
+        {
+            if (!DataManager.Instance.CollectedEvidences.Contains(evidence))
+                DataManager.Instance.CollectedEvidences.Add(evidence);
+        }
+
+        string statement = $"[{witnessNames[currentWitness]}]\n" +
+                           $"목격: {witnessStatements[currentWitness]}\n" +
+                           $"모순: {correctSuspects[currentWitness]} 진술\n" +
+                           $"증거: {evidence}\n";
+        collectedStatements.Add(statement);
+
+        witnessCleared[currentWitness] = true;
+
+        switch (currentWitness)
+        {
+            case 0: witnessBtn1.gameObject.SetActive(false); break;
+            case 1: witnessBtn2.gameObject.SetActive(false); break;
+            case 2: witnessBtn3.gameObject.SetActive(false); break;
+        }
+        if (!witnessCleared[0]) witnessBtn1.gameObject.SetActive(true);
+        if (!witnessCleared[1]) witnessBtn2.gameObject.SetActive(true);
+        if (!witnessCleared[2]) witnessBtn3.gameObject.SetActive(true);
+
+        statementPopup.SetActive(false);
+        currentWitness = -1;
+
+        if (witnessCleared[0] && witnessCleared[1] && witnessCleared[2])
+            StartCoroutine(ShowClearPopup());
+    }
+
+    // ──────────────────────────────────────
+    // 리포트 팝업
+    // ──────────────────────────────────────
+    void OnReportClicked()
+    {
+        if (collectedStatements.Count == 0)
+        {
+            reportText.text = "아직 수집한 진술이 없습니다.\n목격자를 조사해보세요!";
+        }
+        else
+        {
+            string report = "=== 수집한 진술 목록 ===\n\n";
+            foreach (string s in collectedStatements)
+                report += s + "\n";
+            reportText.text = report;
+        }
+        reportPopup.SetActive(true);
+    }
+
+    // ──────────────────────────────────────
+    // 카드 색상 초기화
+    // ──────────────────────────────────────
+    void ResetCardColors()
+    {
+        Color defaultColor = new Color(0.1f, 0.18f, 0.37f);
+        suspectCard1.GetComponent<Image>().color = defaultColor;
+        suspectCard2.GetComponent<Image>().color = defaultColor;
+        suspectCard3.GetComponent<Image>().color = defaultColor;
+        suspectCard4.GetComponent<Image>().color = defaultColor;
+    }
+
+    // ──────────────────────────────────────
+    // 정답 카드 강조
+    // ──────────────────────────────────────
+    void HighlightCorrectCard(string suspectName)
+    {
+        Color highlightColor = new Color(0.1f, 0.5f, 0.1f);
+        if (suspectName == suspectNames[0]) suspectCard1.GetComponent<Image>().color = highlightColor;
+        else if (suspectName == suspectNames[1]) suspectCard2.GetComponent<Image>().color = highlightColor;
+        else if (suspectName == suspectNames[2]) suspectCard3.GetComponent<Image>().color = highlightColor;
+        else if (suspectName == suspectNames[3]) suspectCard4.GetComponent<Image>().color = highlightColor;
+    }
+
+    // ──────────────────────────────────────
+    // 미션 완료 팝업 + 카운트다운
+    // ──────────────────────────────────────
+    IEnumerator ShowClearPopup()
+    {
+        reportButton.gameObject.SetActive(false);
+        clearTitleText.SetActive(true);
+        clearDescText.SetActive(true);
+        countdownText.gameObject.SetActive(true);
+
+        for (int i = 3; i > 0; i--)
+        {
+            countdownText.text = i.ToString();
+            yield return new WaitForSeconds(1f);
+        }
+
+        SceneManager.LoadScene("Mobile_LobbyScene");
+    }
+}
