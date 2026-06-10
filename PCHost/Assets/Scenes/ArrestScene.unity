@@ -157,6 +157,7 @@ MonoBehaviour:
   - "\uD0DC\uBE14\uB9BF\uC744 \uBC18\uB0A9\uD574\uC8FC\uC138\uC694."
   storyText: {fileID: 782372953}
   fadeDuration: 1
+  slideOffset: 20
   charInterval: 0.03
   waitAfterTyping: 2
   nextScene: HostPc
@@ -5347,7 +5348,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 70aca5bcb51fedd4698e9d37f41eed7a, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 9c8a11ed22107504a84025656c1f388f, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1

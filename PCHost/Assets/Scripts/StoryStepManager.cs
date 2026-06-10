@@ -16,7 +16,10 @@ public class StoryStepManager : MonoBehaviour
     public TMP_Text storyText;
 
     [Header("페이드인 시간 (초)")]
-    public float fadeDuration = 1f;
+    public float fadeDuration = 0.5f;
+
+    [Header("카드 슬라이드 거리 (px) - 위에서 내려오는 거리")]
+    public float slideOffset = 20f;
 
     [Header("타이핑 속도 (초)")]
     public float charInterval = 0.03f;
@@ -24,11 +27,19 @@ public class StoryStepManager : MonoBehaviour
     [Header("타이핑 완료 후 다음 스텝까지 대기 시간 (초)")]
     public float waitAfterTyping = 2f;
 
+    [Header("완료 후 설정")]
+    public string nextScene = "PC_LobbyScene";
+    public bool unlockJobSelect = false;  // 오프닝씬에서만 true
+    public bool closeServer = false;      // 성공/실패씬에서만 true
+
     private bool _finishedAll = false;
 
+    // ──────────────────────────────────────
+    // Start
+    // ──────────────────────────────────────
     void Start()
     {
-        // 이미지 전부 숨기기
+        // 모든 이미지 숨기기
         if (imageGroups != null)
         {
             foreach (var cg in imageGroups)
@@ -45,6 +56,9 @@ public class StoryStepManager : MonoBehaviour
         StartCoroutine(AutoPlay());
     }
 
+    // ──────────────────────────────────────
+    // AutoPlay — 이미지 누적 + 텍스트 순서 진행
+    // ──────────────────────────────────────
     private IEnumerator AutoPlay()
     {
         int maxSteps = Mathf.Max(
@@ -54,12 +68,12 @@ public class StoryStepManager : MonoBehaviour
 
         for (int i = 0; i < maxSteps; i++)
         {
-            // 1) 이미지 페이드인 (이전 이미지는 그대로 유지)
+            // 1) 이미지 페이드인 + 슬라이드 (이전 이미지 유지 → 누적)
             if (imageGroups != null &&
                 i < imageGroups.Length &&
                 imageGroups[i] != null)
             {
-                yield return StartCoroutine(FadeIn(imageGroups[i]));
+                yield return StartCoroutine(FadeInSlide(imageGroups[i]));
             }
 
             // 2) 하단 텍스트 타이핑
@@ -74,28 +88,46 @@ public class StoryStepManager : MonoBehaviour
             yield return new WaitForSeconds(waitAfterTyping);
         }
 
-        // 모든 스텝 완료 → 로비로 이동
         OnAllStepsFinished();
     }
 
-    private IEnumerator FadeIn(CanvasGroup cg)
+    // ──────────────────────────────────────
+    // FadeInSlide — alpha 0→1 + 위에서 아래로 슬라이드
+    // ──────────────────────────────────────
+    private IEnumerator FadeInSlide(CanvasGroup cg)
     {
-        if (!cg.gameObject.activeSelf)
-            cg.gameObject.SetActive(true);
+        RectTransform rt = cg.GetComponent<RectTransform>();
 
+        // Inspector에서 설정한 목표 위치를 기준으로 시작 위치 계산
+        Vector2 endPos = rt.anchoredPosition;
+        Vector2 startPos = endPos + new Vector2(0f, slideOffset); // 위에서 내려옴
+
+        cg.gameObject.SetActive(true);
         cg.alpha = 0f;
-        float timer = 0f;
+        rt.anchoredPosition = startPos;
 
+        float timer = 0f;
         while (timer < fadeDuration)
         {
             timer += Time.deltaTime;
-            cg.alpha = Mathf.Lerp(0f, 1f, timer / fadeDuration);
+            float t = Mathf.Clamp01(timer / fadeDuration);
+
+            // EaseOut 커브: 처음 빠르고 끝에서 부드럽게 정착
+            float ease = 1f - (1f - t) * (1f - t);
+
+            cg.alpha = Mathf.Lerp(0f, 1f, ease);
+            rt.anchoredPosition = Vector2.Lerp(startPos, endPos, ease);
+
             yield return null;
         }
 
         cg.alpha = 1f;
+        rt.anchoredPosition = endPos;
     }
 
+    // ──────────────────────────────────────
+    // TypeLine — 한 글자씩 타이핑
+    // ──────────────────────────────────────
     private IEnumerator TypeLine(string line)
     {
         storyText.text = "";
@@ -107,11 +139,9 @@ public class StoryStepManager : MonoBehaviour
         }
     }
 
-    [Header("완료 후 설정")]
-    public string nextScene = "PC_LobbyScene";
-    public bool unlockJobSelect = false;  // 오프닝씬에서만 true
-    public bool closeServer = false;      // 성공/실패씬에서만 true
-
+    // ──────────────────────────────────────
+    // OnAllStepsFinished — 씬 전환
+    // ──────────────────────────────────────
     private void OnAllStepsFinished()
     {
         if (_finishedAll) return;
